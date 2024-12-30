@@ -11,7 +11,7 @@ public class ResizerTexture : EditorWindow
 {
     private const string OutputFolderName = "ForConsoleTextures";
 
-    private const string CurrentVersion = "1.0.7";
+    private const string CurrentVersion = "1.0.8";
     private const string VersionUrl = "https://raw.githubusercontent.com/Jeefrect/TextureResizerUnity/main/version.txt";
     private const string ScriptUrl = "https://raw.githubusercontent.com/Jeefrect/TextureResizerUnity/main/ResizerTexture.cs";
     private const string LocalScriptPath = "Assets/Editor/ResizerTexture.cs";
@@ -47,7 +47,16 @@ public class ResizerTexture : EditorWindow
             Texture2D originalTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
             if (originalTexture == null) continue;
 
-            TextureImporterType originalType = EnsureTextureTypeIsDefault(texturePath);
+            TextureImporter importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+            if (importer == null) continue;
+
+            TextureImporterNPOTScale originalNPOTScale = importer.npotScale;
+            TextureImporterType originalType = importer.textureType;
+
+            importer.textureType = TextureImporterType.Default;
+            importer.npotScale = TextureImporterNPOTScale.None;
+            importer.isReadable = true;
+            importer.SaveAndReimport();
 
             if (originalTexture.width > maxSize || originalTexture.height > maxSize)
             {
@@ -56,7 +65,9 @@ public class ResizerTexture : EditorWindow
                 UnityEngine.Object.DestroyImmediate(resizedTexture);
             }
 
-            RestoreTextureType(texturePath, originalType);
+            importer.textureType = originalType;
+            importer.npotScale = originalNPOTScale;
+            importer.SaveAndReimport();
         }
 
         CreateZipArchive(outputFolderPath);
@@ -155,32 +166,6 @@ public class ResizerTexture : EditorWindow
         return new List<string>(textures);
     }
 
-    private static TextureImporterType EnsureTextureTypeIsDefault(string texturePath)
-    {
-        TextureImporter importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
-        if (importer != null)
-        {
-            TextureImporterType originalType = importer.textureType;
-            if (importer.textureType != TextureImporterType.Default)
-            {
-                importer.textureType = TextureImporterType.Default;
-                importer.SaveAndReimport();
-            }
-            return originalType;
-        }
-        return TextureImporterType.Default;
-    }
-
-    private static void RestoreTextureType(string texturePath, TextureImporterType originalType)
-    {
-        TextureImporter importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
-        if (importer != null && importer.textureType != originalType)
-        {
-            importer.textureType = originalType;
-            importer.SaveAndReimport();
-        }
-    }
-
     private static Texture2D ResizeTexture(Texture2D originalTexture, int maxSize)
     {
         int newWidth, newHeight;
@@ -188,18 +173,20 @@ public class ResizerTexture : EditorWindow
         if (originalTexture.width > originalTexture.height)
         {
             newWidth = maxSize;
-            newHeight = Mathf.RoundToInt((float)originalTexture.height / originalTexture.width * maxSize);
+            newHeight = Mathf.CeilToInt((float)originalTexture.height * maxSize / originalTexture.width);
         }
         else
         {
             newHeight = maxSize;
-            newWidth = Mathf.RoundToInt((float)originalTexture.width / originalTexture.height * maxSize);
+            newWidth = Mathf.CeilToInt((float)originalTexture.width * maxSize / originalTexture.height);
         }
 
-        RenderTexture renderTexture = RenderTexture.GetTemporary(newWidth, newHeight);
-        Graphics.Blit(originalTexture, renderTexture);
+        RenderTexture renderTexture = RenderTexture.GetTemporary(newWidth, newHeight, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Default);
+        renderTexture.filterMode = FilterMode.Bilinear;
 
         RenderTexture.active = renderTexture;
+        Graphics.Blit(originalTexture, renderTexture);
+
         Texture2D resizedTexture = new Texture2D(newWidth, newHeight, TextureFormat.RGBA32, false);
         resizedTexture.ReadPixels(new Rect(0, 0, newWidth, newHeight), 0, 0);
         resizedTexture.Apply();
