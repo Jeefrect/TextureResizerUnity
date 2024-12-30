@@ -9,21 +9,31 @@ using UnityEngine;
 
 public class ResizerTexture : EditorWindow
 {
-    private const int MaxSize = 512;
     private const string OutputFolderName = "ForConsoleTextures";
 
-    private const string CurrentVersion = "1.0.6";
+    private const string CurrentVersion = "1.0.7";
     private const string VersionUrl = "https://raw.githubusercontent.com/Jeefrect/TextureResizerUnity/main/version.txt";
     private const string ScriptUrl = "https://raw.githubusercontent.com/Jeefrect/TextureResizerUnity/main/ResizerTexture.cs";
     private const string LocalScriptPath = "Assets/Editor/ResizerTexture.cs";
     private static bool updateChecked = false;
 
-    [MenuItem("Tools/Compress Textures in Scene")]
-    public static void CompressTexturesInScene()
+    [MenuItem("Tools/Compress Textures in Scene/512px")]
+    public static void CompressTexturesInScene512()
+    {
+        CompressTexturesInScene(512);
+    }
+
+    [MenuItem("Tools/Compress Textures in Scene/1024px")]
+    public static void CompressTexturesInScene1024()
+    {
+        CompressTexturesInScene(1024);
+    }
+
+    public static void CompressTexturesInScene(int maxSize)
     {
         CheckForScriptUpdateOnce();
 
-        string outputFolderPath = Path.Combine(UnityEngine.Application.dataPath, OutputFolderName);
+        string outputFolderPath = Path.Combine(UnityEngine.Application.dataPath, $"{OutputFolderName}_{maxSize}px");
         if (Directory.Exists(outputFolderPath))
             Directory.Delete(outputFolderPath, true);
         Directory.CreateDirectory(outputFolderPath);
@@ -39,9 +49,9 @@ public class ResizerTexture : EditorWindow
 
             TextureImporterType originalType = EnsureTextureTypeIsDefault(texturePath);
 
-            if (originalTexture.width > MaxSize || originalTexture.height > MaxSize)
+            if (originalTexture.width > maxSize || originalTexture.height > maxSize)
             {
-                Texture2D resizedTexture = ResizeTexture(originalTexture);
+                Texture2D resizedTexture = ResizeTexture(originalTexture, maxSize);
                 SaveResizedTexture(resizedTexture, texturePath, outputFolderPath);
                 UnityEngine.Object.DestroyImmediate(resizedTexture);
             }
@@ -52,7 +62,7 @@ public class ResizerTexture : EditorWindow
         CreateZipArchive(outputFolderPath);
 
         AssetDatabase.Refresh();
-        EditorUtility.DisplayDialog("Complete", "Textures have been compressed and saved.", "OK");
+        EditorUtility.DisplayDialog("Complete", $"Textures have been compressed and saved in folder: {OutputFolderName}_{maxSize}px.", "OK");
     }
 
     private static void CheckForScriptUpdateOnce()
@@ -171,19 +181,19 @@ public class ResizerTexture : EditorWindow
         }
     }
 
-    private static Texture2D ResizeTexture(Texture2D originalTexture)
+    private static Texture2D ResizeTexture(Texture2D originalTexture, int maxSize)
     {
         int newWidth, newHeight;
 
         if (originalTexture.width > originalTexture.height)
         {
-            newWidth = MaxSize;
-            newHeight = Mathf.RoundToInt((float)originalTexture.height / originalTexture.width * MaxSize);
+            newWidth = maxSize;
+            newHeight = Mathf.RoundToInt((float)originalTexture.height / originalTexture.width * maxSize);
         }
         else
         {
-            newHeight = MaxSize;
-            newWidth = Mathf.RoundToInt((float)originalTexture.width / originalTexture.height * MaxSize);
+            newHeight = maxSize;
+            newWidth = Mathf.RoundToInt((float)originalTexture.width / originalTexture.height * maxSize);
         }
 
         RenderTexture renderTexture = RenderTexture.GetTemporary(newWidth, newHeight);
