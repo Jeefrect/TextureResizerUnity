@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,11 +12,11 @@ public class ResizerTexture : EditorWindow
     private const int MaxSize = 512;
     private const string OutputFolderName = "ForConsoleTextures";
 
-    private const string CurrentVersion = "1.0.5";
+    private const string CurrentVersion = "1.0.6";
     private const string VersionUrl = "https://raw.githubusercontent.com/Jeefrect/TextureResizerUnity/main/version.txt";
     private const string ScriptUrl = "https://raw.githubusercontent.com/Jeefrect/TextureResizerUnity/main/ResizerTexture.cs";
     private const string LocalScriptPath = "Assets/Editor/ResizerTexture.cs";
-    private static bool updateChecked = false; 
+    private static bool updateChecked = false;
 
     [MenuItem("Tools/Compress Textures in Scene")]
     public static void CompressTexturesInScene()
@@ -222,3 +223,4 @@ public class ResizerTexture : EditorWindow
         UnityEngine.Debug.Log("Zip archive created at: " + zipPath);
     }
 }
+#endif
